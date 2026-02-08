@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>InfusePro: Premium Tea Timer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#09090b">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@700&display=swap');
+        
+        :root {
+            --accent: #22c55e;
+            --accent-glow: rgba(34, 197, 94, 0.2);
+        }
+
+        body { 
+            -webkit-tap-highlight-color: transparent; 
+            font-family: 'Inter', sans-serif;
+        }
+        .timer-font { font-family: 'JetBrains Mono', monospace; }
+        
+        .timer-glow { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .active-timer { 
+            box-shadow: 0 0 50px var(--accent-glow); 
+            border-color: var(--accent); 
+            background-color: rgba(24, 24, 27, 0.8);
+        }
+        
+        .tab-active { 
+            border-bottom: 4px solid var(--accent); 
+            color: #ffffff;
+        }
+
+        .btn-primary { background-color: var(--accent); }
+        .text-accent { color: var(--accent); }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #09090b; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col select-none">
+
+    <!-- Header -->
+    <header class="p-6 bg-zinc-900/80 backdrop-blur-md border-b border-zinc-800 flex justify-between items-center sticky top-0 z-50">
+        <div>
+            <h1 class="text-2xl font-black text-white tracking-tighter">INFUSE<span class="text-accent">PRO</span></h1>
+            <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em]">Fire Tablet Edition</p>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <!-- Theme Toggle Button -->
+            <button onclick="toggleThemeMenu()" class="p-2 bg-zinc-800 rounded-xl hover:bg-zinc-700 transition-colors">
+                <svg class="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path></svg>
+            </button>
+
+            <div id="wake-status" class="hidden md:flex items-center gap-2 text-[10px] bg-zinc-800 px-3 py-1.5 rounded-full text-zinc-400 font-bold transition-colors">
+                <div id="wake-indicator" class="w-1.5 h-1.5 rounded-full bg-zinc-600"></div>
+                SCREEN: AUTO
+            </div>
+        </div>
+    </header>
+
+    <!-- Theme Menu (Hidden by default) -->
+    <div id="theme-menu" class="fixed top-24 right-6 bg-zinc-900 border border-zinc-800 p-4 rounded-3xl shadow-2xl z-[60] hidden w-64">
+        <h3 class="text-xs font-black uppercase tracking-widest text-zinc-500 mb-4 px-2">Visual Themes</h3>
+        <div class="grid grid-cols-1 gap-1">
+            <button onclick="applyTheme('emerald')" class="flex items-center gap-3 p-3 rounded-2xl hover:bg-zinc-800 transition-colors text-left group">
+                <div class="w-4 h-4 rounded-full bg-green-500"></div>
+                <span class="font-bold text-sm">Emerald (Standard)</span>
+            </button>
+            <button onclick="applyTheme('cafe')" class="flex items-center gap-3 p-3 rounded-2xl hover:bg-zinc-800 transition-colors text-left group">
+                <div class="w-4 h-4 rounded-full bg-[#d97706]"></div>
+                <span class="font-bold text-sm">Cafe (Warm Brew)</span>
+            </button>
+            <button onclick="applyTheme('amber')" class="flex items-center gap-3 p-3 rounded-2xl hover:bg-zinc-800 transition-colors text-left group">
+                <div class="w-4 h-4 rounded-full bg-amber-500"></div>
+                <span class="font-bold text-sm">Amber (Classic)</span>
+            </button>
+            <button onclick="applyTheme('rose')" class="flex items-center gap-3 p-3 rounded-2xl hover:bg-zinc-800 transition-colors text-left group">
+                <div class="w-4 h-4 rounded-full bg-rose-500"></div>
+                <span class="font-bold text-sm">Rose (Botanical)</span>
+            </button>
+            <button onclick="applyTheme('onyx')" class="flex items-center gap-3 p-3 rounded-2xl hover:bg-zinc-800 transition-colors text-left group">
+                <div class="w-4 h-4 rounded-full bg-zinc-100"></div>
+                <span class="font-bold text-sm">Onyx (Hi-Contrast)</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-grow p-4 md:p-8 max-w-5xl mx-auto w-full">
+        
+        <!-- Large Timer Display Card -->
+        <div id="timer-card" class="bg-zinc-900 rounded-[3rem] p-10 mb-8 border-2 border-zinc-800 text-center timer-glow relative">
+            <div id="current-preset" class="text-zinc-500 uppercase tracking-[0.3em] text-xs mb-2 font-black">Ready to Brew</div>
+            <div id="timer-display" class="timer-font text-8xl md:text-[12rem] font-bold text-white leading-none mb-4 tracking-tighter">00:00</div>
+            <div id="temp-display" class="text-2xl text-orange-500 font-black mb-10 tracking-wide">--°F <span class="text-zinc-700 mx-2">|</span> --°C</div>
+            
+            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <button onclick="toggleTimer()" id="btn-start" class="btn-primary hover:opacity-90 text-white w-full sm:w-64 py-6 rounded-3xl font-black text-2xl shadow-xl active:scale-95 transition-all uppercase tracking-widest">Start Brew</button>
+                <button onclick="resetTimer()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 w-full sm:w-40 py-6 rounded-3xl font-black text-xl active:scale-95 transition-all uppercase tracking-widest">Reset</button>
+            </div>
+        </div>
+
+        <!-- Mode Selector -->
+        <nav class="flex border-b border-zinc-900 mb-8 font-black text-xs tracking-[0.2em]">
+            <button onclick="switchMode('western')" id="tab-western" class="flex-1 py-5 tab-active transition-all">WESTERN METHOD</button>
+            <button onclick="switchMode('gongfu')" id="tab-gongfu" class="flex-1 py-5 text-zinc-600 transition-all">GONGFU STYLE</button>
+        </nav>
+
+        <!-- Dynamic Preset Grid -->
+        <div id="preset-grid" class="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
+            <!-- Injected by JavaScript -->
+        </div>
+
+    </main>
+
+    <!-- App Footer -->
+    <footer class="p-8 bg-zinc-900/30 border-t border-zinc-900 flex flex-col items-center gap-4">
+        <div class="flex gap-8 text-zinc-500 font-bold text-[10px] tracking-widest uppercase">
+            <span>Precision Sensors</span>
+            <span class="text-zinc-800">•</span>
+            <span>Offline Ready</span>
+            <span class="text-zinc-800">•</span>
+            <span>No Ads</span>
+        </div>
+    </footer>
+
+    <!-- Alarm Overlay -->
+    <div id="alarm-overlay" class="fixed inset-0 btn-primary z-[100] flex flex-col items-center justify-center text-white hidden">
+        <h2 class="text-6xl font-black mb-8 animate-bounce">BREW READY</h2>
+        <button onclick="dismissAlarm()" class="bg-white text-zinc-900 px-16 py-8 rounded-full font-black text-3xl shadow-2xl active:scale-90 transition-transform">DISMISS</button>
+    </div>
+
+    <script>
+        let timeLeft = 0;
+        let timerId = null;
+        let currentMode = 'western';
+        let wakeLock = null;
+        let audioUnlocked = false; // Track if we've successfully interacted with audio
+        
+        const alarmSound = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+        alarmSound.loop = true;
+
+        const THEMES = {
+            emerald: { accent: '#22c55e', glow: 'rgba(34, 197, 94, 0.2)' },
+            amber: { accent: '#f59e0b', glow: 'rgba(245, 158, 11, 0.2)' },
+            rose: { accent: '#f43f5e', glow: 'rgba(244, 63, 94, 0.2)' },
+            onyx: { accent: '#f4f4f5', glow: 'rgba(244, 244, 245, 0.2)' },
+            cafe: { accent: '#d97706', glow: 'rgba(217, 119, 6, 0.2)' }
+        };
+
+        const PRESETS = {
+            western: [
+                { id: 'w1', name: 'Black Tea', sec: 240, f: 212, c: 100, color: 'text-amber-600', desc: 'Full-bodied, robust' },
+                { id: 'w2', name: 'Green Tea', sec: 120, f: 175, c: 80, color: 'text-green-500', desc: 'Delicate, grassy' },
+                { id: 'w3', name: 'Oolong', sec: 180, f: 195, c: 90, color: 'text-orange-400', desc: 'Complex, floral' },
+                { id: 'w4', name: 'White Tea', sec: 120, f: 160, c: 71, color: 'text-zinc-200', desc: 'Silky, subtle' },
+                { id: 'w5', name: 'Herbal', sec: 420, f: 212, c: 100, color: 'text-purple-400', desc: 'Botanical, caffeine-free' },
+                { id: 'w6', name: 'Coffee (Press)', sec: 240, f: 202, c: 94, color: 'text-yellow-700', desc: 'Rich, immersion' }
+            ],
+            gongfu: [
+                { id: 'g1', name: 'Raw Puerh', sec: 15, f: 205, c: 96, color: 'text-emerald-300', desc: 'Young, energetic' },
+                { id: 'g2', name: 'Aged Puerh', sec: 20, f: 212, c: 100, color: 'text-red-900', desc: 'Earthy, mellow' },
+                { id: 'g3', name: 'Rock Oolong', sec: 25, f: 205, c: 96, color: 'stone-text-400', desc: 'Mineral, roasted' },
+                { id: 'g4', name: 'Dancong', sec: 20, f: 195, c: 90, color: 'text-pink-400', desc: 'Honey, orchid' },
+                { id: 'g5', name: 'Black (Gongfu)', sec: 30, f: 195, c: 90, color: 'text-orange-600', desc: 'Malty, sweet' },
+                { id: 'g6', name: 'Flash Wash', sec: 5, f: 212, c: 100, color: 'text-zinc-500', desc: 'Cleanse the leaves' }
+            ]
+        };
+
+        // Theme Logic
+        function applyTheme(themeKey) {
+            const theme = THEMES[themeKey];
+            document.documentElement.style.setProperty('--accent', theme.accent);
+            document.documentElement.style.setProperty('--accent-glow', theme.glow);
+            localStorage.setItem('infusepro_theme', themeKey);
+            document.getElementById('theme-menu').classList.add('hidden');
+        }
+
+        function toggleThemeMenu() {
+            document.getElementById('theme-menu').classList.toggle('hidden');
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.getElementById('tab-western').classList.toggle('tab-active', mode === 'western');
+            document.getElementById('tab-western').classList.toggle('text-zinc-600', mode !== 'western');
+            document.getElementById('tab-gongfu').classList.toggle('tab-active', mode === 'gongfu');
+            document.getElementById('tab-gongfu').classList.toggle('text-zinc-600', mode !== 'gongfu');
+            renderPresets();
+        }
+
+        function renderPresets() {
+            const grid = document.getElementById('preset-grid');
+            grid.innerHTML = PRESETS[currentMode].map(p => `
+                <button onclick="setPreset('${p.name}', ${p.sec}, ${p.f}, ${p.c})" 
+                        class="p-6 bg-zinc-900 border border-zinc-800 rounded-[2rem] text-left active:bg-zinc-800 transition-all group relative overflow-hidden">
+                    <div class="${p.color} font-black text-xl mb-1 group-active:scale-95 transition-transform uppercase tracking-tight">${p.name}</div>
+                    <div class="text-[10px] text-zinc-500 font-black uppercase tracking-widest mb-4">
+                        ${Math.floor(p.sec/60)}m ${p.sec%60}s • ${p.f}°F
+                    </div>
+                    <div class="text-xs text-zinc-600 font-medium">${p.desc}</div>
+                </button>
+            `).join('');
+        }
+
+        function setPreset(name, seconds, f, c) {
+            resetTimer();
+            timeLeft = seconds;
+            document.getElementById('current-preset').innerText = name;
+            document.getElementById('temp-display').innerHTML = `${f}°F <span class="text-zinc-800 mx-2">|</span> ${c}°C`;
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const mins = Math.floor(timeLeft / 60);
+            const secs = timeLeft % 60;
+            document.getElementById('timer-display').innerText = 
+                `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    const status = document.getElementById('wake-status');
+                    status.innerHTML = `<div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div> SCREEN: STAY AWAKE`;
+                    status.classList.remove('text-zinc-400');
+                    status.classList.add('text-accent', 'bg-green-900/20');
+                } catch (err) { console.error(err); }
+            }
+        }
+
+        function toggleTimer() {
+            if (timerId) {
+                clearInterval(timerId);
+                timerId = null;
+                document.getElementById('btn-start').innerText = "RESUME";
+                document.getElementById('timer-card').classList.remove('active-timer');
+            } else if (timeLeft > 0) {
+                // Audio Unlocker: On the first ever click, we play/pause immediately
+                // This "blesses" the audio element so it can play from a setInterval later
+                if (!audioUnlocked) {
+                    const silentPlay = alarmSound.play();
+                    if (silentPlay !== undefined) {
+                        silentPlay.then(() => {
+                            alarmSound.pause();
+                            alarmSound.currentTime = 0;
+                            audioUnlocked = true;
+                        }).catch(() => { /* Silent fail */ });
+                    }
+                }
+
+                requestWakeLock();
+                document.getElementById('timer-card').classList.add('active-timer');
+                document.getElementById('btn-start').innerText = "PAUSE";
+                timerId = setInterval(() => {
+                    timeLeft--;
+                    updateDisplay();
+                    if (timeLeft <= 0) {
+                        triggerAlarm();
+                    }
+                }, 1000);
+            }
+        }
+
+        function triggerAlarm() {
+            clearInterval(timerId);
+            timerId = null;
+            
+            // Play sound with catch block to prevent unhandled rejection pop-ups
+            const playPromise = alarmSound.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.log("Audio play blocked by browser. User interaction needed.");
+                });
+            }
+
+            if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
+            document.getElementById('alarm-overlay').classList.remove('hidden');
+        }
+
+        function dismissAlarm() {
+            alarmSound.pause();
+            alarmSound.currentTime = 0;
+            document.getElementById('alarm-overlay').classList.add('hidden');
+            resetTimer();
+        }
+
+        function resetTimer() {
+            clearInterval(timerId);
+            timerId = null;
+            timeLeft = 0;
+            if (wakeLock) {
+                wakeLock.release().then(() => wakeLock = null);
+                const status = document.getElementById('wake-status');
+                status.innerHTML = `<div class="w-1.5 h-1.5 rounded-full bg-zinc-600"></div> SCREEN: AUTO`;
+                status.classList.remove('text-accent', 'bg-green-900/20');
+                status.classList.add('text-zinc-400');
+            }
+            document.getElementById('current-preset').innerText = "Ready to Brew";
+            document.getElementById('temp-display').innerHTML = `--°F <span class="text-zinc-700 mx-2">|</span> --°C`;
+            document.getElementById('btn-start').innerText = "START BREW";
+            document.getElementById('timer-card').classList.remove('active-timer');
+            updateDisplay();
+        }
+
+        // Initialize App
+        const savedTheme = localStorage.getItem('infusepro_theme') || 'emerald';
+        applyTheme(savedTheme);
+        renderPresets();
+        
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed:', err));
+            });
+        }
+
+        // Close theme menu on outside click
+        window.addEventListener('click', (e) => {
+            const menu = document.getElementById('theme-menu');
+            const btn = e.target.closest('button');
+            if (!menu.contains(e.target) && (!btn || !btn.onclick?.toString().includes('toggleThemeMenu'))) {
+                menu.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
